@@ -1,0 +1,11 @@
+{
+  "tests/test_simple_ml.py::submit_add": true,
+  "tests/test_simple_ml.py::submit_nn_epoch": true,
+  "tests/test_simple_ml.py::submit_parse_mnist": true,
+  "tests/test_simple_ml.py::submit_softmax_loss": true,
+  "tests/test_simple_ml.py::submit_softmax_regression_epoch": true,
+  "tests/test_simple_ml.py::submit_softmax_regression_epoch_cpp": true,
+  "tests/test_simple_ml.py::test_nn_epoch": true,
+  "tests/test_simple_ml.py::test_softmax_regression_epoch": true,
+  "tests/test_simple_ml.py::test_softmax_regression_epoch_cpp": true
+}
