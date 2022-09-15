@@ -58,8 +58,10 @@ def parse_mnist(image_filesname, label_filename):
     pixelString = '>' + str(imgNum * rows * columns) + 'B'
     pixels = struct.unpack_from(pixelString, data, offset)
     X = np.reshape(pixels, [imgNum, rows * columns]).astype('float32')
-    X_max = np.max(X, axis=1, keepdims=True)
-    X_min = np.min(X, axis=1, keepdims=True)
+    X_max = np.max(X)
+    X_min = np.min(X)
+    # X_max = np.max(X, axis=1, keepdims=True)
+    # X_min = np.min(X, axis=1, keepdims=True)
     
     X_normalized = ((X - X_min) / (X_max - X_min))
     
