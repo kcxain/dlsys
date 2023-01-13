@@ -1,0 +1,4 @@
+/content/drive/MyDrive/10714/hw3/build/CMakeFiles/ndarray_backend_cpu.dir
+/content/drive/MyDrive/10714/hw3/build/CMakeFiles/ndarray_backend_cuda.dir
+/content/drive/MyDrive/10714/hw3/build/CMakeFiles/edit_cache.dir
+/content/drive/MyDrive/10714/hw3/build/CMakeFiles/rebuild_cache.dir

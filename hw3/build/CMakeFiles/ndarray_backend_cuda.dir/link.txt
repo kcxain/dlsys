@@ -1,0 +1,1 @@
+/usr/bin/c++ -fPIC -std=c++11 -O2 -march=native  -shared  -o ../python/needle/backend_ndarray/ndarray_backend_cuda.cpython-37m-x86_64-linux-gnu.so CMakeFiles/ndarray_backend_cuda.dir/src/ndarray_backend_cuda_generated_ndarray_backend_cuda.cu.o  -Wl,-rpath,/usr/local/cuda/lib64 /usr/local/cuda/lib64/libcudart_static.a -ldl -lrt /usr/local/cuda/lib64/libcudart.so -lpthread 

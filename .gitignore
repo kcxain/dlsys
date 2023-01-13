@@ -3,3 +3,5 @@
 **/.pytest_cache
 **/test.py
 **/.DS_Store
+**/.idea
+**/data/
