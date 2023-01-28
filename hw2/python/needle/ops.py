@@ -260,22 +260,32 @@ class Summation(TensorOp):
         return a.sum(axis=self.axes)
         ### END YOUR SOLUTION
 
-    def gradient(self, out_grad, node):
+    def gradient(self, out_grad: Tensor, node: Tensor):
         ### BEGIN YOUR SOLUTION
-        # (x,y,z,w) (1,2) -> ones(x,w)
-        # outgrad.shape = (x,w)
-        # 1. outgrad.reshape(x,1,1,w)
-        # 2. (x,1,1,w) broadcast-> (x,y,z,w)
-        a = node.inputs[0]
-        old_shape = out_grad.shape
-        new_shape = [1] * len(a.shape)
+
+        # a = node.inputs[0]
+        # old_shape = out_grad.shape
+        # new_shape = [1] * len(a.shape)
+        # j = 0
+        # for i in range(len(a.shape)):
+        #   if j < len(old_shape) and old_shape[j] == a.shape[i]:
+        #     new_shape[i] = a.shape[i]
+        #     j += 1
+        # return broadcast_to(reshape(out_grad, tuple(new_shape)), a.shape)
+
+        shape = node.inputs[0].shape
+        new_shape = [1] * len(shape)
+        if self.axes:
+            s = set(self.axes)
+        else:
+            s = set(range(len(shape)))
         j = 0
-        for i in range(len(a.shape)):
-          if j < len(old_shape) and old_shape[j] == a.shape[i]:
-            new_shape[i] = a.shape[i]
-            j += 1
-        return broadcast_to(reshape(out_grad, tuple(new_shape)), a.shape)
-        ### END YOUR SOLUTION
+        for i in range(len(shape)):
+            if i not in s:
+                new_shape[i] = out_grad.shape[j]
+                j += 1
+        result =  broadcast_to(reshape(out_grad, tuple(new_shape)), shape)
+        return result
 
 
 def summation(a, axes=None):
