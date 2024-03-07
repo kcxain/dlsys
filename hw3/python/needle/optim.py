@@ -1,5 +1,6 @@
 """Optimization module"""
 import needle as ndl
+import numpy as np
 
 
 class Optimizer:
@@ -23,6 +24,14 @@ class SGD(Optimizer):
         self.weight_decay = weight_decay
 
     def step(self):
+        ### BEGIN YOUR SOLUTION
+        raise NotImplementedError()
+        ### END YOUR SOLUTION
+
+    def clip_grad_norm(self, max_norm=0.25):
+        """
+        Clips gradient norm of parameters.
+        """
         ### BEGIN YOUR SOLUTION
         raise NotImplementedError()
         ### END YOUR SOLUTION

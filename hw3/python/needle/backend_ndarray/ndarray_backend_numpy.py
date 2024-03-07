@@ -66,7 +66,7 @@ def scalar_div(a, val, out):
 
 
 def scalar_power(a, val, out):
-    out.array[:] = a.array ** power
+    out.array[:] = a.array**val
 
 
 def ewise_maximum(a, b, out):

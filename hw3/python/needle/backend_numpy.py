@@ -22,14 +22,24 @@ class CPUDevice(Device):
     def enabled(self):
         return True
 
-    def randn(self, *shape, dtype="float32"):
-        return numpy.random.randn(*shape).astype(dtype)
+    def zeros(self, *shape, dtype="float32"):
+        return numpy.zeros(shape, dtype=dtype)
 
-    def rand(self, *shape, dtype="float32"):
-        return numpy.random.rand(*shape).astype(dtype)
+    def ones(self, *shape, dtype="float32"):
+        return numpy.ones(shape, dtype=dtype)
+
+    def randn(self, *shape):
+        # note: numpy doesn't support types within standard random routines, and
+        # .astype("float32") does work if we're generating a singleton
+        return numpy.random.randn(*shape)
+
+    def rand(self, *shape):
+        # note: numpy doesn't support types within standard random routines, and
+        # .astype("float32") does work if we're generating a singleton
+        return numpy.random.rand(*shape)
 
     def one_hot(self, n, i, dtype="float32"):
-        return numpy.eye(n, dtype=dtype)
+        return numpy.eye(n, dtype=dtype)[i]
 
     def empty(self, shape, dtype="float32"):
         return numpy.empty(shape, dtype=dtype)
