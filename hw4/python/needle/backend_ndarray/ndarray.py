@@ -2,6 +2,7 @@ import operator
 import math
 from functools import reduce
 import numpy as np
+from torch import set_float32_matmul_precision
 from . import ndarray_backend_numpy
 from . import ndarray_backend_cpu
 
@@ -601,7 +602,15 @@ class NDArray:
         axes = ( (0, 0), (1, 1), (0, 0)) pads the middle axis with a 0 on the left and right side.
         """
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        view_idxs = []
+        new_shape = []
+        for dim_size, (pad_before, pad_after) in zip(self._shape, list(axes)):
+            new_shape.append(dim_size + pad_after + pad_before)
+            view_idxs.append(slice(pad_before, dim_size + pad_after, 1))
+        res = NDArray.make(new_shape, device=self.device)
+        res.fill(0)
+        res[tuple(view_idxs)] = self
+        return res              
         ### END YOUR SOLUTION
 
 def array(a, dtype="float32", device=None):
