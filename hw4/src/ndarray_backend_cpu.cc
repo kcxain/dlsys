@@ -66,7 +66,7 @@ void Compact(const AlignedArray& a, AlignedArray* out, std::vector<int32_t> shap
   std::vector<uint32_t> pos(dim, 0);
   for (size_t i = 0; i < out->size; i++)
   {
-    uint32_t idx = 0;
+    int idx = 0;
     for (int j = 0; j < dim; j++)
       idx += strides[dim - 1 - j] * pos[j];
     out->ptr[i] = a.ptr[idx + offset];
