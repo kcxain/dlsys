@@ -222,7 +222,14 @@ class Summation(TensorOp):
 
     def compute(self, a):
         ### BEGIN YOUR SOLUTION
-        return a.sum(axis=self.axes)
+        if self.axes is None:
+            return a.sum(axis = None)
+        elif isinstance(self.axes, int) or (isinstance(self.axes, (list, tuple)) and len(self.axes) == 1):
+            return a.sum(self.axes)
+        else:
+            for axis in reversed(sorted(self.axes)):
+                a = a.sum(axis = axis)
+            return a
         ### END YOUR SOLUTION
 
     def gradient(self, out_grad, node): 
@@ -460,12 +467,20 @@ class Dilate(TensorOp):
 
     def compute(self, a):
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        new_shape = list(a.shape)
+        for axis in self.axes:
+            new_shape[axis] = a.shape[axis] * (self.dilation + 1)
+        new_array = array_api.full(tuple(new_shape), 0, device=a.device)
+        slices = [slice(0, shape) for shape in new_shape]
+        for axis in self.axes:
+            slices[axis] = slice(0, new_shape[axis], self.dilation + 1)
+        new_array[tuple(slices)] = a
+        return new_array
         ### END YOUR SOLUTION
 
     def gradient(self, out_grad, node):
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        return undilate(out_grad, self.axes, self.dilation)
         ### END YOUR SOLUTION
 
 
@@ -480,17 +495,32 @@ class UnDilate(TensorOp):
 
     def compute(self, a):
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        slices = [slice(0, shape) for shape in a.shape]
+        for axis in self.axes:
+            slices[axis] = slice(0, a.shape[axis], self.dilation + 1)
+        return a[tuple(slices)]
         ### END YOUR SOLUTION
 
     def gradient(self, out_grad, node):
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        return dilate(out_grad, self.axes, self.dilation)
         ### END YOUR SOLUTION
 
 
 def undilate(a, axes, dilation):
     return UnDilate(axes, dilation)(a)
+
+
+def conv_im2col(Z, weight):
+    N,H,W,C_in = Z.shape
+    K,_,_,C_out = weight.shape
+    Ns, Hs, Ws, Cs = Z.strides
+    
+    inner_dim = K * K * C_in
+    A = numpy.lib.stride_tricks.as_strided(Z, shape = (N, H-K+1, W-K+1, K, K, C_in),
+                                        strides = (Ns, Hs, Ws, Hs, Ws, Cs)).reshape(-1,inner_dim)
+    out = A @ weight.reshape(-1, C_out)
+    return out.reshape(N,H-K+1,W-K+1,C_out)
 
 
 class Conv(TensorOp):
@@ -500,12 +530,35 @@ class Conv(TensorOp):
 
     def compute(self, A, B):
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        A = A.pad(((0, 0), (self.padding, self.padding), (self.padding, self.padding), (0, 0)))
+        N, H, W, C_in = A.shape
+        K, _, _, C_out = B.shape
+        Ns, Hs, Ws, Cs = A.strides
+        inner_dim = K * K * C_in
+        strided_A = A.as_strided(shape=(N, (H - K + 1) // self.stride, (W - K + 1) // self.stride, K, K, C_in),
+                                 strides=(Ns, Hs * self.stride, Ws * self.stride, Hs, Ws, Cs)).compact(). \
+                                reshape((N * (H - K + 1) // self.stride * (W - K + 1) // self.stride, inner_dim))
+        out = strided_A @ B.compact().reshape((K * K * C_in, C_out))
+        return out.compact().reshape((N, (H - K + 1) // self.stride, (W - K + 1) // self.stride, C_out))
         ### END YOUR SOLUTION
 
     def gradient(self, out_grad, node):
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        X = node.inputs[0] # N, H, W, Cin
+        W = node.inputs[1]
+        K, _, _, _ = W.shape
+        if self.stride > 1:
+            # N, (H + 2P - K + 1) // self.stride, (W + 2P - K + 1) // self.stride, C_out
+            out_grad = dilate(out_grad, (1, 2), self.stride-1) # N, (H + 2P - K + 1), (W + 2P - K + 1), C_out
+        W_flip = flip(W, (0, 1)) # K, K, C_in, C_out
+        W_transpose = transpose(W_flip, (2, 3)) # K, K, C_out, C_in
+        X_grad = conv(out_grad, W_transpose, padding=K-1-self.padding)
+
+        X_permute = transpose(X, (0, 3))
+        out_grad_permute = transpose(transpose(out_grad, (0, 1)), (1, 2))
+        W_grad_transpose = conv(X_permute, out_grad_permute, padding=self.padding)
+        W_grad = transpose(transpose(W_grad_transpose, (0, 1)), (1, 2))
+        return X_grad, W_grad
         ### END YOUR SOLUTION
 
 
