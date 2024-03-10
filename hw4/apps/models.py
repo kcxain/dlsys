@@ -65,7 +65,15 @@ class LanguageModel(nn.Module):
         """
         super(LanguageModel, self).__init__()
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        assert seq_model in ["rnn", "lstm"], "Unsupported sequence model. Must be rnn or lstm."
+        self.output_size = output_size
+        self.hidden_size = hidden_size
+        self.embed = nn.Embedding(output_size, embedding_size, device=device, dtype=dtype)
+        if seq_model == "rnn":
+            self.seq_model = nn.RNN(embedding_size, hidden_size, num_layers=num_layers, device=device, dtype=dtype)
+        else:
+            self.seq_model = nn.LSTM(embedding_size, hidden_size, num_layers=num_layers, device=device, dtype=dtype)
+        self.linear = nn.Linear(hidden_size, output_size, device=device, dtype=dtype)
         ### END YOUR SOLUTION
 
     def forward(self, x, h=None):
@@ -82,7 +90,11 @@ class LanguageModel(nn.Module):
             else h is tuple of (h0, c0), each of shape (num_layers, bs, hidden_size)
         """
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        seq_len, bs = x.shape
+        x = self.embed(x)
+        x, h = self.seq_model(x, h)
+        x = self.linear(x.reshape((seq_len * bs, self.hidden_size)))
+        return x, h
         ### END YOUR SOLUTION
 
 

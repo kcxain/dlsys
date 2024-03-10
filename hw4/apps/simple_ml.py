@@ -137,7 +137,7 @@ def nn_epoch(X, y, W1, W2, lr=0.1, batch=100):
     ### END YOUR SOLUTION
 
 ### CIFAR-10 training ###
-def epoch_general_cifar10(dataloader, model, loss_fn=nn.SoftmaxLoss, opt=None):
+def epoch_general_cifar10(dataloader, model, loss_fn=nn.SoftmaxLoss(), opt=None):
     """
     Iterates over the dataloader. If optimizer is not None, sets the
     model to train mode, and for each batch updates the model parameters.
@@ -156,40 +156,38 @@ def epoch_general_cifar10(dataloader, model, loss_fn=nn.SoftmaxLoss, opt=None):
     """
     np.random.seed(4)
     ### BEGIN YOUR SOLUTION
-    losses = []
-    corrects = []
-    dataset_size = 0
-    if opt:
+    correct, total_loss = 0, 0
+
+    if opt is None:
+        model.eval()
+        for batch in dataloader:
+            X, y = batch
+            X, y = ndl.Tensor(X, device=device), ndl.Tensor(y, device=device)
+            out = model(X)
+            loss = loss_fn(out, y)
+            correct += np.sum(np.argmax(out.numpy(), axis=1) == y.numpy())
+            total_loss += loss.data.numpy() * y.shape[0]
+    else:
         model.train()
-        for x, y in dataloader:
-            batch_size = y.shape[0]
-            dataset_size += batch_size
-            y_pred = model(x)
-            loss = loss_fn(y_pred, y)
+        for batch in dataloader:
             opt.reset_grad()
+            X, y = batch
+            X, y = ndl.Tensor(X, device=device), ndl.Tensor(y, device=device)
+            out = model(X)
+            loss = loss_fn(out, y)
+            # print(loss)
             loss.backward()
             opt.step()
-            losses.append(loss.numpy() * batch_size)
-            correct = np.sum(y_pred.numpy().argmax(axis = 1) == y.numpy())
-            corrects.append(correct)
-    else:
-        model.eval()
-        for x, y in dataloader:
-            batch_size = y.shape[0]
-            dataset_size += batch_size
-            y_pred = model(x)
-            loss = loss_fn(y_pred, y)
-            losses.append(loss.numpy() * batch_size)
-            correct = np.sum(y_pred.numpy().argmax(axis = 1) == y.numpy())
-            corrects.append(correct)
-    avg_acc = np.sum(np.array(corrects)) / dataset_size
-    avg_loss = np.sum(np.array(losses)) / dataset_size
-    return avg_acc, avg_loss
+            correct += np.sum(np.argmax(out.numpy(), axis=1) == y.numpy())
+            total_loss += loss.data.numpy() * y.shape[0]
+
+    sample_nums = len(dataloader.dataset)
+    return correct / sample_nums, total_loss / sample_nums
     ### END YOUR SOLUTION
 
 
 def train_cifar10(model, dataloader, n_epochs=1, optimizer=ndl.optim.Adam,
-          lr=0.001, weight_decay=0.001, loss_fn=nn.SoftmaxLoss):
+          lr=0.001, weight_decay=0.001, loss_fn=nn.SoftmaxLoss()):
     """
     Performs {n_epochs} epochs of training.
 
@@ -210,15 +208,12 @@ def train_cifar10(model, dataloader, n_epochs=1, optimizer=ndl.optim.Adam,
     ### BEGIN YOUR SOLUTION
     opt = optimizer(model.parameters(), lr=lr, weight_decay=weight_decay)
     for epoch in range(n_epochs):
-        start = time.time()
         avg_acc, avg_loss = epoch_general_cifar10(dataloader, model, loss_fn=loss_fn, opt=opt)
-        epoch_t = time.time() - start
-        print(f"Epoch: {epoch}, Acc: {avg_acc}, Loss: {avg_loss}, Time: {epoch_t:.2f}s")
-    return avg_acc, avg_loss
+        print(f"Epoch: {epoch}, Acc: {avg_acc}, Loss: {avg_loss}")
     ### END YOUR SOLUTION
 
 
-def evaluate_cifar10(model, dataloader, loss_fn=nn.SoftmaxLoss):
+def evaluate_cifar10(model, dataloader, loss_fn=nn.SoftmaxLoss()):
     """
     Computes the test accuracy and loss of the model.
 
@@ -233,21 +228,8 @@ def evaluate_cifar10(model, dataloader, loss_fn=nn.SoftmaxLoss):
     """
     np.random.seed(4)
     ### BEGIN YOUR SOLUTION
-    losses = []
-    corrects = []
-    dataset_size = 0
-    model.eval()
-    for x, y in dataloader:
-        batch_size = y.shape[0]
-        dataset_size += batch_size
-        y_pred = model(x)
-        loss = loss_fn(y_pred, y)
-        losses.append(loss.numpy() * batch_size)
-        correct = np.sum(y_pred.numpy().argmax(axis = 1) == y.numpy())
-        corrects.append(correct)
-    avg_acc = np.sum(np.array(corrects)) / dataset_size
-    avg_loss = np.sum(np.array(losses)) / dataset_size
-    return avg_acc, avg_loss
+    avg_acc, avg_loss = epoch_general_cifar10(dataloader, model, loss_fn=loss_fn)
+    print(f"Evaluation Acc: {avg_acc}, Evaluation Loss: {avg_loss}")
     ### END YOUR SOLUTION
 
 
@@ -274,12 +256,50 @@ def epoch_general_ptb(data, model, seq_len=40, loss_fn=nn.SoftmaxLoss(), opt=Non
     """
     np.random.seed(4)
     ### BEGIN YOUR SOLUTION
-    raise NotImplementedError()
+    losses = []
+    corrects = []
+    dataset_size = 0
+    train = opt is not None
+    if train:
+        model.train()
+    else:
+        model.eval()
+    
+    nbatch, batch_size = data.shape
+    
+    hidden = None
+    for i in range(0, nbatch - 1, seq_len):
+        x, y = ndl.data.get_batch(data, i, seq_len, device=device, dtype=dtype)
+
+        batch_size = y.shape[0]
+        dataset_size += batch_size
+        y_pred, hidden = model(x, hidden)
+
+        if isinstance(hidden, tuple):
+            h, c = hidden
+            hidden = (h.detach(), c.detach())
+        else:
+            hidden = hidden.detach()
+        # soft_max = nn.SoftmaxLoss()
+        loss = loss_fn(y_pred, y)
+        
+        if train:
+            opt.reset_grad()
+            loss.backward()
+            opt.step()
+
+        losses.append(loss.numpy() * batch_size)
+        correct = np.sum(y_pred.numpy().argmax(axis = 1) == y.numpy())
+        corrects.append(correct)
+
+    avg_acc = np.sum(np.array(corrects)) / dataset_size
+    avg_loss = np.sum(np.array(losses)) / dataset_size
+    return avg_acc, avg_loss
     ### END YOUR SOLUTION
 
 
 def train_ptb(model, data, seq_len=40, n_epochs=1, optimizer=ndl.optim.SGD,
-          lr=4.0, weight_decay=0.0, loss_fn=nn.SoftmaxLoss, clip=None,
+          lr=4.0, weight_decay=0.0, loss_fn=nn.SoftmaxLoss(), clip=None,
           device=None, dtype="float32"):
     """
     Performs {n_epochs} epochs of training.
@@ -301,10 +321,14 @@ def train_ptb(model, data, seq_len=40, n_epochs=1, optimizer=ndl.optim.SGD,
     """
     np.random.seed(4)
     ### BEGIN YOUR SOLUTION
-    raise NotImplementedError()
+    opt = optimizer(model.parameters(), lr = lr, weight_decay = weight_decay)
+
+    for _ in range(n_epochs):
+        avg_acc, avg_loss = epoch_general_ptb(data, model, seq_len=seq_len, loss_fn=loss_fn, opt=opt, device=device, dtype=dtype)
+    return avg_acc, avg_loss
     ### END YOUR SOLUTION
 
-def evaluate_ptb(model, data, seq_len=40, loss_fn=nn.SoftmaxLoss,
+def evaluate_ptb(model, data, seq_len=40, loss_fn=nn.SoftmaxLoss(),
         device=None, dtype="float32"):
     """
     Computes the test accuracy and loss of the model.
@@ -321,7 +345,8 @@ def evaluate_ptb(model, data, seq_len=40, loss_fn=nn.SoftmaxLoss,
     """
     np.random.seed(4)
     ### BEGIN YOUR SOLUTION
-    raise NotImplementedError()
+    avg_acc, avg_loss = epoch_general_ptb(data, model, seq_len=seq_len, loss_fn=loss_fn, opt=None, device=device, dtype=dtype)
+    return avg_acc, avg_loss
     ### END YOUR SOLUTION
 
 ### CODE BELOW IS FOR ILLUSTRATION, YOU DO NOT NEED TO EDIT

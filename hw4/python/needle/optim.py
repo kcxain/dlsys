@@ -37,9 +37,11 @@ class SGD(Optimizer):
         """
         Clips gradient norm of parameters.
         """
-        ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
-        ### END YOUR SOLUTION
+        total_norm = np.linalg.norm(np.array([np.linalg.norm(p.grad.detach().numpy()).reshape((1,)) for p in self.params]))
+        clip_coef = max_norm / (total_norm + 1e-6)
+        clip_coef_clamped = min((np.asscalar(clip_coef), 1.0))
+        for p in self.params:
+            p.grad = p.grad.detach() * clip_coef_clamped
 
 
 class Adam(Optimizer):
@@ -71,6 +73,7 @@ class Adam(Optimizer):
                 self.m[i] = ndl.init.zeros(*param.shape, device=param.device)
                 self.v[i] = ndl.init.zeros(*param.shape, device=param.device)
             grad = ndl.Tensor(param.grad, device=param.device, dtype='float32').data + param.data * self.weight_decay
+            # print(grad)
             # m_{t+1}, v{t+1}
             self.m[i] = self.beta1 * self.m[i] + (1 - self.beta1) * grad
             self.v[i] = self.beta2 * self.v[i] + (1 - self.beta2) * grad**2

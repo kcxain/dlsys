@@ -110,6 +110,11 @@ class Flatten(Module):
         return ops.reshape(X, (X.shape[0], shape_prod // X.shape[0]))
         ### END YOUR SOLUTION
 
+class Tanh(Module):
+    def forward(self, x: Tensor) -> Tensor:
+        ### BEGIN YOUR SOLUTION
+        return ops.tanh(x)
+        ### END YOUR SOLUTION
 
 class ReLU(Module):
     def forward(self, x: Tensor) -> Tensor:
