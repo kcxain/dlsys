@@ -11,12 +11,42 @@ class ResNet9(ndl.nn.Module):
     def __init__(self, device=None, dtype="float32"):
         super().__init__()
         ### BEGIN YOUR SOLUTION ###
-        raise NotImplementedError() ###
+        self.device = device
+        self.dtype = dtype
+        self.model = nn.Sequential(
+            self.ConvBN(3, 16, 7, 4),
+            self.ConvBN(16, 32, 3, 2),
+            nn.Residual(
+                nn.Sequential(
+                    self.ConvBN(32, 32, 3, 1),
+                    self.ConvBN(32, 32, 3, 1)
+                )
+            ),
+            self.ConvBN(32, 64, 3, 2),
+            self.ConvBN(64, 128, 3, 2),
+            nn.Residual(
+                nn.Sequential(
+                    self.ConvBN(128, 128, 3, 1),
+                    self.ConvBN(128, 128, 3, 1)
+                )
+            ),
+            nn.Flatten(),
+            nn.Linear(128, 128, device = self.device, dtype = self.dtype),
+            nn.ReLU(),
+            nn.Linear(128, 10, device = self.device, dtype = self.dtype)
+        )
         ### END YOUR SOLUTION
+    
+    def ConvBN(self, a, b, k, s):
+        return nn.Sequential(
+            nn.Conv(a, b, kernel_size = k, stride = s, device = self.device, dtype = self.dtype),
+            nn.BatchNorm2d(b, device = self.device, dtype = self.dtype),
+            nn.ReLU()
+        )
 
     def forward(self, x):
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        return self.model(x)
         ### END YOUR SOLUTION
 
 

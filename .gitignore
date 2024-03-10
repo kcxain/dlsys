@@ -4,5 +4,7 @@
 **/test.py
 **/.DS_Store
 **/.idea
-**/data/
+*/data/
 **/.vscode/
+**/build/
+*.so

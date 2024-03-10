@@ -38,39 +38,43 @@ def logsoftmax(a):
 class LogSumExp(TensorOp):
     def __init__(self, axes: Optional[tuple] = None):
         self.axes = axes
+        if isinstance(axes, int):
+            self.axes = tuple([axes])
 
     def compute(self, Z):
         ### BEGIN YOUR SOLUTION
-        maxz = Z.max(self.axes, keepdims=True)
-        ret = array_api.log(array_api.exp(Z - maxz.broadcast_to(Z.shape)).sum(axis=self.axes, keepdims=True)) + maxz
-        if self.axes is None:
-            axes = list(range(len(Z.shape)))
-        elif isinstance(self.axes, int):
-            axes = [self.axes]
-        else:
-            axes = list(self.axes)
-        
+        Z_max = Z.max(axis=self.axes)
+        Z_shape = list(Z.shape)
         if self.axes is not None:
-            out_shape = [size for i, size in enumerate(Z.shape) if i not in axes]
+            for axis in self.axes:
+                Z_shape[axis] = 1
+            Z_max_reshaped = Z_max.reshape(tuple(Z_shape))
         else:
-            out_shape = [1]
-        
-        return ret.reshape(tuple(out_shape))
+            Z_max_reshaped = Z_max.reshape(tuple([1 for _ in Z_shape]))
+        Z_normalized = Z - Z_max_reshaped.broadcast_to(Z.shape)
+        return array_api.log(array_api.summation( array_api.exp(Z_normalized), axis = self.axes )) + Z_max
         ### END YOUR SOLUTION
 
     def gradient(self, out_grad, node):
         ### BEGIN YOUR SOLUTION
-        z = node.inputs[0]
-        z_max_dim = Tensor(z.get_outputs().max(self.axes, keepdims=True), device=z.device, requires_grad=False)
-        z_exp = exp(z + (-z_max_dim).broadcast_to(z.shape))
-        z_exp_sum = summation(z_exp, axes=self.axes)
-        grad_z_exp_sum = out_grad / z_exp_sum
-        ori_shape = z.shape
-        sum_shape = range(len(z.shape)) if self.axes is None else self.axes
-        now_shape = list(ori_shape)
-        for i in sum_shape:
-            now_shape[i] = 1
-        return reshape(grad_z_exp_sum, now_shape).broadcast_to(ori_shape) * z_exp
+        Z = node.inputs[0]
+        Z_max = Tensor(Z.numpy().max(axis = self.axes), device = Z.device)
+
+        Z_shape_for_reshape = list(Z.shape)
+        if self.axes is not None:
+            for axis in self.axes:
+                Z_shape_for_reshape[axis] = 1
+        else:
+            for i in range(len(Z_shape_for_reshape)):
+                Z_shape_for_reshape[i] = 1
+        Z_shape_for_reshape = tuple(Z_shape_for_reshape)
+        Z_shape_for_broadcast = Z.shape
+
+        Z_max_reshaped_broadcasted = broadcast_to(reshape(Z_max, Z_shape_for_reshape), Z_shape_for_broadcast)
+        Z_minus_Z_max = Z - Z_max_reshaped_broadcasted
+        Z_exp = exp(Z_minus_Z_max)
+        Z_sum_exp = broadcast_to(reshape(summation(Z_exp, self.axes), Z_shape_for_reshape), Z_shape_for_broadcast)
+        return multiply(broadcast_to(reshape(out_grad, Z_shape_for_reshape), Z_shape_for_broadcast), divide(Z_exp, Z_sum_exp))
         ### END YOUR SOLUTION
 
 

@@ -86,9 +86,9 @@ class Linear(Module):
         self.out_features = out_features
 
         ### BEGIN YOUR SOLUTION
-        self.weight = Parameter(init.kaiming_uniform(in_features, out_features, dtype=dtype))
+        self.weight = Parameter(init.kaiming_uniform(in_features, out_features, device=device, dtype=dtype))
         if bias:
-            self.bias = Parameter(init.kaiming_uniform(out_features, 1, dtype=dtype).reshape((1, out_features)))
+            self.bias = Parameter(init.kaiming_uniform(out_features, 1, device=device, dtype=dtype).reshape((1, out_features)))
         else:
             self.bias = None
         ### END YOUR SOLUTION
@@ -105,7 +105,9 @@ class Linear(Module):
 class Flatten(Module):
     def forward(self, X):
         ### BEGIN YOUR SOLUTION
-        return X.reshape((X.shape[0], -1))
+        shape = X.shape
+        shape_prod = np.prod(shape)
+        return ops.reshape(X, (X.shape[0], shape_prod // X.shape[0]))
         ### END YOUR SOLUTION
 
 
@@ -131,9 +133,11 @@ class Sequential(Module):
 class SoftmaxLoss(Module):
     def forward(self, logits: Tensor, y: Tensor):
         ### BEGIN YOUR SOLUTION
-        exp_sum = ops.logsumexp(logits, axes=(1, )).sum()
-        z_y_sum = (logits * init.one_hot(logits.shape[1], y)).sum()
-        return (exp_sum - z_y_sum) / logits.shape[0]
+        num_examples, output_dim = logits.shape[0], logits.shape[1]
+        y_onehot = init.one_hot(output_dim, y, device=logits.device, dtype=logits.dtype)
+        lhs = ops.logsumexp(logits, axes = 1)
+        rhs = ops.summation(ops.multiply(logits, y_onehot), axes=1)
+        return ops.divide_scalar(ops.summation(lhs-rhs), num_examples)
         ### END YOUR SOLUTION
 
 
@@ -144,10 +148,10 @@ class BatchNorm1d(Module):
         self.eps = eps
         self.momentum = momentum
         ### BEGIN YOUR SOLUTION
-        self.weight = Parameter(init.ones(self.dim),requires_grad=True)
-        self.bias = Parameter(init.zeros(self.dim),requires_grad=True)
-        self.running_mean = init.zeros(self.dim)
-        self.running_var = init.ones(self.dim)
+        self.weight = Parameter(init.ones(self.dim, device=device),requires_grad=True)
+        self.bias = Parameter(init.zeros(self.dim, device=device),requires_grad=True)
+        self.running_mean = init.zeros(self.dim, device=device)
+        self.running_var = init.ones(self.dim, device=device)
         ### END YOUR SOLUTION
 
 
@@ -158,8 +162,6 @@ class BatchNorm1d(Module):
         # running estimates
         mean = x.sum(axes=(0,)) / batch_size
         x_minus_mean = x - mean.broadcast_to(x.shape)
-        print(mean)
-        print(mean.broadcast_to(x.shape))
         var = (x_minus_mean ** 2).sum(axes=(0, )) / batch_size
 
         if self.training:
@@ -192,8 +194,8 @@ class LayerNorm1d(Module):
         self.dim = dim
         self.eps = eps
         ### BEGIN YOUR SOLUTION
-        self.weight = Parameter(init.ones(dim),requires_grad=True)
-        self.bias = Parameter(init.zeros(dim),requires_grad=True)
+        self.weight = Parameter(init.ones(dim, device=device),requires_grad=True)
+        self.bias = Parameter(init.zeros(dim, device=device),requires_grad=True)
         ### END YOUR SOLUTION
 
     def forward(self, x: Tensor) -> Tensor:
