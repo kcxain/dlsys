@@ -529,7 +529,6 @@ class Conv(TensorOp):
         self.padding = padding
 
     def compute(self, A, B):
-        ### BEGIN YOUR SOLUTION
         A = A.pad(((0, 0), (self.padding, self.padding), (self.padding, self.padding), (0, 0)))
         N, H, W, C_in = A.shape
         K, _, _, C_out = B.shape
@@ -537,16 +536,14 @@ class Conv(TensorOp):
         inner_dim = K * K * C_in
         strided_A = A.as_strided(shape=(N, (H - K + 1) // self.stride, (W - K + 1) // self.stride, K, K, C_in),
                                  strides=(Ns, Hs * self.stride, Ws * self.stride, Hs, Ws, Cs)).compact(). \
-                                reshape((N * (H - K + 1) // self.stride * (W - K + 1) // self.stride, inner_dim))
-        out = strided_A @ B.compact().reshape((K * K * C_in, C_out))
+                                reshape((-1, inner_dim))
+        out = strided_A @ B.compact().reshape((-1, C_out))
         return out.compact().reshape((N, (H - K + 1) // self.stride, (W - K + 1) // self.stride, C_out))
-        ### END YOUR SOLUTION
 
     def gradient(self, out_grad, node):
-        ### BEGIN YOUR SOLUTION
-        X = node.inputs[0] # N, H, W, Cin
-        W = node.inputs[1]
-        K, _, _, _ = W.shape
+        # N, H, W, Cin
+        X = node.inputs[0], W = node.inputs[1]
+        K = W.shape[0]
         if self.stride > 1:
             # N, (H + 2P - K + 1) // self.stride, (W + 2P - K + 1) // self.stride, C_out
             out_grad = dilate(out_grad, (1, 2), self.stride-1) # N, (H + 2P - K + 1), (W + 2P - K + 1), C_out
@@ -559,7 +556,6 @@ class Conv(TensorOp):
         W_grad_transpose = conv(X_permute, out_grad_permute, padding=self.padding)
         W_grad = transpose(transpose(W_grad_transpose, (0, 1)), (1, 2))
         return X_grad, W_grad
-        ### END YOUR SOLUTION
 
 
 def conv(a, b, stride=1, padding=1):

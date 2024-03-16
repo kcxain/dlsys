@@ -282,7 +282,7 @@ def epoch_general_ptb(data, model, seq_len=40, loss_fn=nn.SoftmaxLoss(), opt=Non
             hidden = hidden.detach()
         # soft_max = nn.SoftmaxLoss()
         loss = loss_fn(y_pred, y)
-        
+        # print(loss)
         if train:
             opt.reset_grad()
             loss.backward()
