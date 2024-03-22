@@ -1,3 +1,4 @@
+import math
 from typing import List
 from needle.autograd import Tensor
 import needle.backend_ndarray.ndarray as ndarray
@@ -108,7 +109,8 @@ class MultiHeadAttention(Module):
         probs = None
 
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        result = self.matmul(q, k.transpose(2,3)) / math.sqrt(q_dim)
+        probs = self.dropput(self.matmul(self.softmax(result), v))
         ### END YOUR SOLUTION
 
         return result, probs

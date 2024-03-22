@@ -379,6 +379,7 @@ class Stack(TensorOp):
     def compute(self, args):
         ### BEGIN YOUR SOLUTION
         new_shape = list(args[0].shape)
+        # BUG
         new_shape.insert(self.axis, len(args))
         new_arr = array_api.empty(shape=new_shape, device=args[0].device)
         
